@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:fl_chart/fl_chart.dart';
-
+import 'package:candlesticks/candlesticks.dart'; // Zastępuje fl_chart
 void main() {
   runApp(const MyApp());
 }
@@ -28,7 +27,7 @@ class MarketScreen extends StatefulWidget {
 }
 
 class _MarketScreenState extends State<MarketScreen> {
-  List<dynamic> chartData = [];
+  List<Candle> candles = [];
   List<dynamic> newsData = [];
   bool isLoading = true;
 
@@ -40,14 +39,27 @@ class _MarketScreenState extends State<MarketScreen> {
     fetchMarketData();
   }
 
-  Future<void> fetchMarketData() async {
+Future<void> fetchMarketData() async {
     try {
       final chartResponse = await http.get(Uri.parse('$backendUrl/chart'));
       final newsResponse = await http.get(Uri.parse('$backendUrl/news'));
 
       if (chartResponse.statusCode == 200 && newsResponse.statusCode == 200) {
+        final List<dynamic> rawChartData = json.decode(chartResponse.body);
+        
         setState(() {
-          chartData = json.decode(chartResponse.body);
+          candles = rawChartData.map((e) => Candle(
+            date: DateTime.parse(e['date']),
+            high: (e['high'] as num).toDouble(),
+            low: (e['low'] as num).toDouble(),
+            open: (e['open'] as num).toDouble(),
+            close: (e['close'] as num).toDouble(),
+            volume: (e['volume'] as num).toDouble(),
+          )).toList();
+          
+          // Odwrócenie listy, candlesticks wymaga kolejności od najnowszych
+          candles = candles.reversed.toList(); 
+          
           newsData = json.decode(newsResponse.body);
           isLoading = false; 
         });
@@ -101,30 +113,11 @@ class _MarketScreenState extends State<MarketScreen> {
                     children: [
                       // GÓRNA CZĘŚĆ ŚRODKA - WYKRES
                       Expanded(
-                        flex: 3, // Flex 3 oznacza, że wykres zajmie więcej miejsca niż newsy
+                        flex: 3, 
                         child: Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: LineChart(
-                            LineChartData(
-                              gridData: const FlGridData(show: true),
-                              titlesData: const FlTitlesData(
-                                bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)), 
-                                topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                              ),
-                              borderData: FlBorderData(show: true),
-                              lineBarsData: [
-                                LineChartBarData(
-                                  spots: chartData.asMap().entries.map((e) {
-                                    return FlSpot(e.key.toDouble(), (e.value['price'] as num).toDouble());
-                                  }).toList(),
-                                  isCurved: true,
-                                  color: Colors.blueAccent,
-                                  barWidth: 3,
-                                  dotData: const FlDotData(show: true),
-                                ),
-                              ],
-                            ),
+                          padding: const EdgeInsets.all(8.0), // Mniejszy padding wygląda lepiej z Candlesticks
+                          child: Candlesticks(
+                            candles: candles,
                           ),
                         ),
                       ),
