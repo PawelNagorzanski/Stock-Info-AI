@@ -31,7 +31,25 @@ class _MarketScreenState extends State<MarketScreen> {
   List<dynamic> newsData = [];
   bool isLoading = true;
 
-  final String backendUrl = 'http://localhost:5295/api/stock'; 
+  // Nowe zmienne dla interfejsu
+  String currentSymbol = 'AAPL';
+  String searchQuery = '';
+
+  // Lista popularnych spółek US (darmowy Finnhub)
+  final List<Map<String, String>> usStocks = [
+    {'symbol': 'AAPL', 'name': 'Apple Inc.'},
+    {'symbol': 'MSFT', 'name': 'Microsoft'},
+    {'symbol': 'GOOGL', 'name': 'Alphabet (Google)'},
+    {'symbol': 'AMZN', 'name': 'Amazon'},
+    {'symbol': 'TSLA', 'name': 'Tesla'},
+    {'symbol': 'NVDA', 'name': 'NVIDIA'},
+    {'symbol': 'META', 'name': 'Meta Platforms'},
+    {'symbol': 'NFLX', 'name': 'Netflix'},
+    {'symbol': 'AMD', 'name': 'Advanced Micro Devices'},
+    {'symbol': 'INTC', 'name': 'Intel'},
+  ];
+
+  final String backendUrl = 'http://localhost:5295/api/stock';
 
   @override
   void initState() {
@@ -39,9 +57,11 @@ class _MarketScreenState extends State<MarketScreen> {
     fetchMarketData();
   }
 
-Future<void> fetchMarketData() async {
+  // Dodano przekazywanie symbolu do API
+  Future<void> fetchMarketData() async {
+    setState(() => isLoading = true);
     try {
-      final chartResponse = await http.get(Uri.parse('$backendUrl/chart'));
+      final chartResponse = await http.get(Uri.parse('$backendUrl/chart?symbol=$currentSymbol'));
       final newsResponse = await http.get(Uri.parse('$backendUrl/news'));
 
       if (chartResponse.statusCode == 200 && newsResponse.statusCode == 200) {
@@ -55,22 +75,18 @@ Future<void> fetchMarketData() async {
             open: (e['open'] as num).toDouble(),
             close: (e['close'] as num).toDouble(),
             volume: (e['volume'] as num).toDouble(),
-          )).toList();
-          
-          // Odwrócenie listy, candlesticks wymaga kolejności od najnowszych
-          candles = candles.reversed.toList(); 
+          )).toList().reversed.toList();
           
           newsData = json.decode(newsResponse.body);
-          isLoading = false; 
+          isLoading = false;
         });
       }
-} catch (e) {
-  print('Błąd pobierania danych: $e');
-  setState(() {
-    isLoading = false; // <-- DODAJ TO
-  });
-}
+    } catch (e) {
+      print('Błąd: $e');
+      setState(() => isLoading = false);
+    }
   }
+// ...
 
   @override
   Widget build(BuildContext context) {
@@ -114,16 +130,28 @@ Future<void> fetchMarketData() async {
                 Expanded(
                   child: Column(
                     children: [
-                      // GÓRNA CZĘŚĆ ŚRODKA - WYKRES
-                      Expanded(
-                        flex: 3, 
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0), // Mniejszy padding wygląda lepiej z Candlesticks
-                          child: Candlesticks(
-                            candles: candles,
-                          ),
-                        ),
-                      ),
+ // GÓRNA CZĘŚĆ ŚRODKA - WYKRES
+Expanded(
+  flex: 3,
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        child: Text(
+          'Wykres: $currentSymbol', 
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)
+        ),
+      ),
+      Expanded(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Candlesticks(candles: candles),
+        ),
+      ),
+    ],
+  ),
+),
                       
                       const Divider(thickness: 2),
                       const Padding(
@@ -162,25 +190,50 @@ Future<void> fetchMarketData() async {
                 // ==========================================
                 // PRAWA KOLUMNA - INSTRUMENTY (Zaślepka)
                 // ==========================================
-                Container(
-                  width: 250,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    border: Border(left: BorderSide(color: Colors.grey[300]!))
-                  ),
-                  child: ListView(
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text('Instrumenty', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ),
-                      ListTile(title: Text('USD/PLN'), leading: Icon(Icons.show_chart)),
-                      ListTile(title: Text('EUR/USD'), leading: Icon(Icons.show_chart)),
-                      ListTile(title: Text('S&P 500'), leading: Icon(Icons.show_chart)),
-                      ListTile(title: Text('WIG20'), leading: Icon(Icons.show_chart)),
-                    ],
-                  ),
-                ),
+Container(
+  width: 250,
+  decoration: BoxDecoration(
+    color: Colors.grey[100],
+    border: Border(left: BorderSide(color: Colors.grey[300]!))
+  ),
+  child: Column(
+    children: [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Text('Instrumenty (USA)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: TextField(
+          decoration: const InputDecoration(
+            labelText: 'Szukaj...',
+            prefixIcon: Icon(Icons.search, size: 20),
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+          onChanged: (value) => setState(() => searchQuery = value.toUpperCase()),
+        ),
+      ),
+      Expanded(
+        child: ListView(
+          children: usStocks
+              .where((s) => s['symbol']!.contains(searchQuery) || s['name']!.toUpperCase().contains(searchQuery))
+              .map((stock) => ListTile(
+                    title: Text(stock['symbol']!, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(stock['name']!),
+                    selected: currentSymbol == stock['symbol'],
+                    selectedTileColor: Colors.blue.withOpacity(0.1),
+                    onTap: () {
+                      setState(() => currentSymbol = stock['symbol']!);
+                      fetchMarketData(); // Pobiera dane dla nowego symbolu
+                    },
+                  ))
+              .toList(),
+        ),
+      ),
+    ],
+  ),
+),
               ],
             ),
     );
