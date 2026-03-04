@@ -1,30 +1,56 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
-namespace StockApi.Controllers;
+namespace stock_backend.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
-public class StockController : ControllerBase
+[Route("api/stock")]
+public class MarketController : ControllerBase
 {
-    [HttpGet("chart")]
-    public IEnumerable<ChartPoint> GetChartData()
+    private readonly HttpClient _httpClient;
+    private readonly IConfiguration _config;
+
+    public MarketController(HttpClient httpClient, IConfiguration config)
     {
-        return new List<ChartPoint>
-        {
-            new() { Date = DateTime.Now.AddDays(-3), Price = 105.20 },
-            new() { Date = DateTime.Now.AddDays(-2), Price = 103.50 },
-            new() { Date = DateTime.Now.AddDays(-1), Price = 108.80 },
-            new() { Date = DateTime.Now, Price = 110.00 }
-        };
+        _httpClient = httpClient;
+        _config = config;
     }
 
-    [HttpGet("news")]
-    public IEnumerable<NewsEvent> GetNews()
+    [HttpGet("chart")]
+    public async Task<IActionResult> GetChart([FromQuery] string symbol = "AAPL", [FromQuery] string resolution = "D")
     {
-        return new List<NewsEvent>
+        var apiKey = _config["FinnhubApiKey"];
+        
+        // Dane z ostatnich 30 dni
+        var to = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var from = DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeSeconds();
+
+        var url = $"https://finnhub.io/api/v1/stock/candle?symbol={symbol}&resolution={resolution}&from={from}&to={to}&token={apiKey}";
+        
+        var response = await _httpClient.GetAsync(url);
+        if (!response.IsSuccessStatusCode) return StatusCode(500, "Błąd API Finnhub");
+
+        var content = await response.Content.ReadAsStringAsync();
+        var finnhubData = JsonSerializer.Deserialize<FinnhubCandleResponse>(content);
+
+        // Mapowanie na format frontendu
+        var result = new List<CandleData>();
+        if (finnhubData?.s == "ok" && finnhubData.t != null)
         {
-            new() { Date = DateTime.Now.AddDays(-2), Title = "Decyzja Fed o stopach", Impact = "Negative" },
-            new() { Date = DateTime.Now.AddDays(-1), Title = "Dobre wyniki spółki X", Impact = "Positive" }
-        };
+            for (int i = 0; i < finnhubData.t.Count; i++)
+            {
+                result.Add(new CandleData
+                {
+                    Date = DateTimeOffset.FromUnixTimeSeconds(finnhubData.t[i]).DateTime,
+                    Open = finnhubData.o![i],
+                    High = finnhubData.h![i],
+                    Low = finnhubData.l![i],
+                    Close = finnhubData.c![i],
+                    Volume = finnhubData.v![i]
+                });
+            }
+        }
+
+        return Ok(result);
     }
 }

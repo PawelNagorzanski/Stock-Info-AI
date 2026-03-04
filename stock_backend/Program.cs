@@ -15,6 +15,9 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 }); 
+// Dodaj to:
+builder.Services.AddHttpClient();
+
 var app = builder.Build();
 
 // Uruchamiamy CORS przed kontrolerami! To bardzo ważne.
