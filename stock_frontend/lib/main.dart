@@ -64,9 +64,12 @@ Future<void> fetchMarketData() async {
           isLoading = false; 
         });
       }
-    } catch (e) {
-      print('Błąd pobierania danych: $e');
-    }
+} catch (e) {
+  print('Błąd pobierania danych: $e');
+  setState(() {
+    isLoading = false; // <-- DODAJ TO
+  });
+}
   }
 
   @override

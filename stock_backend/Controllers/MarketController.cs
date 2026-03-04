@@ -8,49 +8,67 @@ namespace stock_backend.Controllers;
 public class MarketController : ControllerBase
 {
     private readonly HttpClient _httpClient;
-    private readonly IConfiguration _config;
 
-    public MarketController(HttpClient httpClient, IConfiguration config)
+    public MarketController(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        _config = config;
+        // Yahoo API wymaga nagłówka User-Agent, inaczej odrzuci połączenie
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
     }
 
     [HttpGet("chart")]
-    public async Task<IActionResult> GetChart([FromQuery] string symbol = "AAPL", [FromQuery] string resolution = "D")
+    public async Task<IActionResult> GetChart([FromQuery] string symbol = "AAPL")
     {
-        var apiKey = _config["FinnhubApiKey"];
-        
-        // Dane z ostatnich 30 dni
-        var to = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var from = DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeSeconds();
-
-        var url = $"https://finnhub.io/api/v1/stock/candle?symbol={symbol}&resolution={resolution}&from={from}&to={to}&token={apiKey}";
+        // Interwał 1 dzień, zakres 1 miesiąc (symbol dla WIG20 to "WIG20.WA")
+        var url = $"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1mo";
         
         var response = await _httpClient.GetAsync(url);
-        if (!response.IsSuccessStatusCode) return StatusCode(500, "Błąd API Finnhub");
+        if (!response.IsSuccessStatusCode) return StatusCode(500, $"Błąd Yahoo: {response.StatusCode}");
 
         var content = await response.Content.ReadAsStringAsync();
-        var finnhubData = JsonSerializer.Deserialize<FinnhubCandleResponse>(content);
-
-        // Mapowanie na format frontendu
+        using var doc = JsonDocument.Parse(content);
+        
         var result = new List<CandleData>();
-        if (finnhubData?.s == "ok" && finnhubData.t != null)
+        var resultNode = doc.RootElement.GetProperty("chart").GetProperty("result")[0];
+        
+        if (!resultNode.TryGetProperty("timestamp", out var timestampsNode)) return Ok(result);
+
+        var timestamps = timestampsNode.EnumerateArray().ToList();
+        var quote = resultNode.GetProperty("indicators").GetProperty("quote")[0];
+        
+        var opens = quote.GetProperty("open").EnumerateArray().ToList();
+        var highs = quote.GetProperty("high").EnumerateArray().ToList();
+        var lows = quote.GetProperty("low").EnumerateArray().ToList();
+        var closes = quote.GetProperty("close").EnumerateArray().ToList();
+        var volumes = quote.GetProperty("volume").EnumerateArray().ToList();
+
+        for (int i = 0; i < timestamps.Count; i++)
         {
-            for (int i = 0; i < finnhubData.t.Count; i++)
+            // Omijanie pustych dni giełdowych (święta itp.)
+            if (opens[i].ValueKind == JsonValueKind.Null) continue;
+
+            result.Add(new CandleData
             {
-                result.Add(new CandleData
-                {
-                    Date = DateTimeOffset.FromUnixTimeSeconds(finnhubData.t[i]).DateTime,
-                    Open = finnhubData.o![i],
-                    High = finnhubData.h![i],
-                    Low = finnhubData.l![i],
-                    Close = finnhubData.c![i],
-                    Volume = finnhubData.v![i]
-                });
-            }
+                Date = DateTimeOffset.FromUnixTimeSeconds(timestamps[i].GetInt64()).DateTime,
+                Open = opens[i].GetDecimal(),
+                High = highs[i].GetDecimal(),
+                Low = lows[i].GetDecimal(),
+                Close = closes[i].GetDecimal(),
+                Volume = volumes[i].GetDecimal()
+            });
         }
 
         return Ok(result);
+    }
+
+    [HttpGet("news")]
+    public IActionResult GetNews()
+    {
+        var news = new List<object>
+        {
+            new { date = DateTime.UtcNow.AddDays(-2).ToString("yyyy-MM-dd"), title = "Oczekiwana korekta na S&P500", impact = "Negative" },
+            new { date = DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd"), title = "Świetne wyniki gigantów tech", impact = "Positive" }
+        };
+        return Ok(news);
     }
 }
