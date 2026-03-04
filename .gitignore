@@ -399,3 +399,82 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# =========================
+# .NET (Core / 5 / 6 / 7 / 8)
+# =========================
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.dbmdl
+*.jfm
+*.pvc
+TestResults/
+packages/
+*.nupkg
+*.snk
+*.sln.docstates
+
+# =========================
+# Flutter & Dart
+# =========================
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+lib/generated_plugin_registrant.dart
+
+# =========================
+# Flutter: Android
+# =========================
+android/.gradle/
+android/app/src/main/gen/
+android/local.properties
+*.keystore
+!default.keystore
+
+# =========================
+# Flutter: iOS / macOS
+# =========================
+ios/**/*.pbxuser
+ios/**/*.mode1v3
+ios/**/*.mode2v3
+ios/**/*.pbxbuildstate
+ios/**/*.xcworkspace/xcuserdata/
+ios/Flutter/.last_build_id
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/flutter_assets/
+ios/Flutter/flutter_export_environment.sh
+ios/Pods/
+ios/.symlinks/
+macos/Flutter/ephemeral/
+macos/Flutter/GeneratedPluginRegistrant.swift
+macos/Pods/
+
+# =========================
+# Flutter: Web / Linux / Windows
+# =========================
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+
+# =========================
+# System i Środowiska (IDE)
+# =========================
+.idea/
+.DS_Store
+Thumbs.db
+ehthumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
