@@ -205,14 +205,22 @@ Container(
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: TextField(
-          decoration: const InputDecoration(
-            labelText: 'Szukaj...',
-            prefixIcon: Icon(Icons.search, size: 20),
-            border: OutlineInputBorder(),
-            isDense: true,
-          ),
-          onChanged: (value) => setState(() => searchQuery = value.toUpperCase()),
-        ),
+  decoration: const InputDecoration(
+    labelText: 'Szukaj lub wpisz symbol (Enter)',
+    prefixIcon: Icon(Icons.search, size: 20),
+    border: OutlineInputBorder(),
+    isDense: true,
+  ),
+  onChanged: (value) => setState(() => searchQuery = value.toUpperCase()),
+  onSubmitted: (value) {
+    if (value.trim().isNotEmpty) {
+      setState(() {
+        currentSymbol = value.trim().toUpperCase();
+      });
+      fetchMarketData(); // Pobiera dane dla wpisanego z palca symbolu
+    }
+  },
+)
       ),
       Expanded(
         child: ListView(
