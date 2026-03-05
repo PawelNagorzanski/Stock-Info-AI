@@ -199,9 +199,14 @@ class _MarketScreenState extends State<MarketScreen> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment
-                              .spaceBetween, // Rozdziela tytuł i przyciski
+                        child: Wrap(
+                          // Zamieniono Row na Wrap
+                          alignment: WrapAlignment
+                              .spaceBetween, // Rozdziela elementy na boki
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 16.0, // Odstęp poziomy po zawinięciu tekstu
+                          runSpacing:
+                              8.0, // Odstęp pionowy po zawinięciu w nowy wiersz
                           children: [
                             Text(
                               'Wykres: $currentSymbol',
@@ -210,19 +215,47 @@ class _MarketScreenState extends State<MarketScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            _buildTimeframeSelector(), // NOWE: Pasek wyboru interwału
+                            _buildTimeframeSelector(), // Pasek wyboru interwału
                           ],
                         ),
                       ),
+                      // Tutaj znajduje się reszta zawartości, np. wykres
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: candles.isNotEmpty
                               ? InteractiveChart(
+                                  // 1. Zmiana klucza wymusza odświeżenie wykresu przy zmianie interwału
                                   key: ValueKey(
-                                    currentSymbol,
-                                  ), // Zapobiega błędom przy zmianie spółki
+                                    '$currentSymbol-$currentInterval',
+                                  ),
                                   candles: candles,
+
+                                  // 2. Nadpisanie formatowania daty na kursorze
+                                  timeLabel: (timestamp, visibleDataCount) {
+                                    final date =
+                                        DateTime.fromMillisecondsSinceEpoch(
+                                          timestamp,
+                                        );
+                                    final y = date.year;
+                                    final m = date.month.toString().padLeft(
+                                      2,
+                                      '0',
+                                    );
+                                    final d = date.day.toString().padLeft(
+                                      2,
+                                      '0',
+                                    );
+
+                                    // Zakładając, że zmienna z interwałem nazywa się currentInterval
+                                    if (currentInterval == '1wk') {
+                                      return 'Tydz: $y-$m-$d';
+                                    } else if (currentInterval == '1mo') {
+                                      return 'M-c: $y-$m';
+                                    } else {
+                                      return '$y-$m-$d'; // Domyślnie dla 1d
+                                    }
+                                  },
                                 )
                               : const Center(child: Text('Brak danych')),
                         ),
