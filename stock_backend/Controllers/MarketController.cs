@@ -16,11 +16,11 @@ public class MarketController : ControllerBase
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
     }
 
-    [HttpGet("chart")]
-    public async Task<IActionResult> GetChart([FromQuery] string symbol = "AAPL")
+[HttpGet("chart")]
+    public async Task<IActionResult> GetChart([FromQuery] string symbol = "AAPL", [FromQuery] string range = "1mo", [FromQuery] string interval = "1d")
     {
-        // Interwał 1 dzień, zakres 1 miesiąc (symbol dla WIG20 to "WIG20.WA")
-        var url = $"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1mo";
+        // Dynamiczne wstawianie parametrów do URL
+        var url = $"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?interval={interval}&range={range}";
         
         var response = await _httpClient.GetAsync(url);
         if (!response.IsSuccessStatusCode) return StatusCode(500, $"Błąd Yahoo: {response.StatusCode}");
