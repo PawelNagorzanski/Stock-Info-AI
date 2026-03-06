@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:interactive_chart/interactive_chart.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 void main() {
   runApp(const MyApp());
@@ -109,11 +109,9 @@ class _MarketScreenState extends State<MarketScreen> {
   Widget _buildTimeframeSelector() {
     // Definicja dostępnych interwałów z Yahoo Finance
     final timeframes = {
-      '1D': {'range': '1d', 'interval': '5m'},
-      '1W': {'range': '5d', 'interval': '15m'},
-      '1M': {'range': '1mo', 'interval': '1d'},
-      '3M': {'range': '3mo', 'interval': '1d'},
-      '1Y': {'range': '1y', 'interval': '1d'},
+      '1 Dzień': {'range': '10y', 'interval': '1d'},
+      '1 Tydz.': {'range': '10y', 'interval': '1wk'},
+      '1 M-c': {'range': '10y', 'interval': '1mo'},
     };
 
     return Wrap(
@@ -224,38 +222,92 @@ class _MarketScreenState extends State<MarketScreen> {
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: candles.isNotEmpty
-                              ? InteractiveChart(
-                                  // 1. Zmiana klucza wymusza odświeżenie wykresu przy zmianie interwału
-                                  key: ValueKey(
-                                    '$currentSymbol-$currentInterval',
+                              ? LineChart(
+                                  LineChartData(
+                                    gridData: const FlGridData(show: true),
+                                    titlesData: FlTitlesData(
+                                      leftTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          getTitlesWidget: (value, meta) =>
+                                              Text(
+                                                '\$${value.toStringAsFixed(0)}',
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                        ),
+                                      ),
+                                      bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          getTitlesWidget: (value, meta) {
+                                            if (value.toInt() >= 0 &&
+                                                value.toInt() <
+                                                    candles.length) {
+                                              final date =
+                                                  DateTime.fromMillisecondsSinceEpoch(
+                                                    candles[value.toInt()]
+                                                        .timestamp,
+                                                  );
+                                              return Text(
+                                                currentInterval == '1mo'
+                                                    ? '${date.year}-${date.month.toString().padLeft(2, '0')}'
+                                                    : '${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                ),
+                                              );
+                                            }
+                                            return const Text('');
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    borderData: FlBorderData(show: true),
+                                    lineBarsData: [
+                                      LineChartBarData(
+                                        spots: candles
+                                            .asMap()
+                                            .entries
+                                            .map(
+                                              (entry) => FlSpot(
+                                                entry.key.toDouble(),
+                                                entry.value.close,
+                                              ),
+                                            )
+                                            .toList(),
+                                        isCurved: false,
+                                        color: Colors.blue,
+                                        barWidth: 2,
+                                        belowBarData: BarAreaData(show: false),
+                                      ),
+                                    ],
+                                    lineTouchData: LineTouchData(
+                                      touchTooltipData: LineTouchTooltipData(
+                                        getTooltipItems: (touchedSpots) {
+                                          return touchedSpots.map((spot) {
+                                            final candle =
+                                                candles[spot.x.toInt()];
+                                            final date =
+                                                DateTime.fromMillisecondsSinceEpoch(
+                                                  candle.timestamp,
+                                                );
+                                            return LineTooltipItem(
+                                              'Data: ${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}\n'
+                                              'Otwarcie: \$${candle.open.toStringAsFixed(2)}\n'
+                                              'Zamknięcie: \$${candle.close.toStringAsFixed(2)}\n'
+                                              'Min: \$${candle.low.toStringAsFixed(2)}\n'
+                                              'Max: \$${candle.high.toStringAsFixed(2)}',
+                                              const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            );
+                                          }).toList();
+                                        },
+                                      ),
+                                    ),
                                   ),
-                                  candles: candles,
-
-                                  // 2. Nadpisanie formatowania daty na kursorze
-                                  timeLabel: (timestamp, visibleDataCount) {
-                                    final date =
-                                        DateTime.fromMillisecondsSinceEpoch(
-                                          timestamp,
-                                        );
-                                    final y = date.year;
-                                    final m = date.month.toString().padLeft(
-                                      2,
-                                      '0',
-                                    );
-                                    final d = date.day.toString().padLeft(
-                                      2,
-                                      '0',
-                                    );
-
-                                    // Zakładając, że zmienna z interwałem nazywa się currentInterval
-                                    if (currentInterval == '1wk') {
-                                      return 'Tydz: $y-$m-$d';
-                                    } else if (currentInterval == '1mo') {
-                                      return 'M-c: $y-$m';
-                                    } else {
-                                      return '$y-$m-$d'; // Domyślnie dla 1d
-                                    }
-                                  },
                                 )
                               : const Center(child: Text('Brak danych')),
                         ),
@@ -399,4 +451,23 @@ class _MarketScreenState extends State<MarketScreen> {
             ),
     );
   }
+}
+
+/// Klasa reprezentująca dane świecy OHLCV (Open, High, Low, Close, Volume)
+class CandleData {
+  final int timestamp;
+  final double high;
+  final double low;
+  final double open;
+  final double close;
+  final double volume;
+
+  CandleData({
+    required this.timestamp,
+    required this.high,
+    required this.low,
+    required this.open,
+    required this.close,
+    required this.volume,
+  });
 }
