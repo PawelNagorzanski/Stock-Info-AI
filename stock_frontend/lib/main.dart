@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:interactive_chart/interactive_chart.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,8 +13,20 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Giełda App',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      title: 'Stock Terminal',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        colorScheme: const ColorScheme.dark(
+          primary: Colors.blueAccent,
+          surface: Color(0xFF1E1E1E),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1E1E1E),
+          elevation: 0,
+          centerTitle: true,
+        ),
+      ),
       home: const MarketScreen(),
     );
   }
@@ -28,17 +40,15 @@ class MarketScreen extends StatefulWidget {
 }
 
 class _MarketScreenState extends State<MarketScreen> {
-  List<CandleData> candles = [];
+  List<CandleData> candles = []; // Klasa CandleData pochodzi z pakietu
   List<dynamic> newsData = [];
   bool isLoading = true;
 
-  // Nowe zmienne dla interfejsu
   String currentSymbol = 'AAPL';
   String searchQuery = '';
   String currentRange = '1mo';
   String currentInterval = '1d';
 
-  // Lista popularnych spółek US (darmowy Finnhub)
   final List<Map<String, String>> usStocks = [
     {'symbol': 'AAPL', 'name': 'Apple Inc.'},
     {'symbol': 'MSFT', 'name': 'Microsoft'},
@@ -60,14 +70,12 @@ class _MarketScreenState extends State<MarketScreen> {
     fetchMarketData();
   }
 
-  // Dodano przekazywanie symbolu do API
   Future<void> fetchMarketData() async {
     setState(() {
       isLoading = true;
-      candles = []; // Krok 1: Twarde czyszczenie pamięci wykresu
+      candles = [];
     });
     try {
-      // NOWE: Dodano przekazywanie range i interval do URL
       final chartResponse = await http.get(
         Uri.parse(
           '$backendUrl/chart?symbol=$currentSymbol&range=$currentRange&interval=$currentInterval',
@@ -77,7 +85,6 @@ class _MarketScreenState extends State<MarketScreen> {
 
       if (chartResponse.statusCode == 200 && newsResponse.statusCode == 200) {
         final List<dynamic> rawChartData = json.decode(chartResponse.body);
-
         final List<CandleData> newCandles = rawChartData
             .map(
               (e) => CandleData(
@@ -91,7 +98,6 @@ class _MarketScreenState extends State<MarketScreen> {
             )
             .toList();
 
-        // Paczka wymaga sortowania od najstarszej do najnowszej (chronologicznie)
         newCandles.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
         setState(() {
@@ -105,13 +111,11 @@ class _MarketScreenState extends State<MarketScreen> {
     }
   }
 
-  // Generuje pasek z przyciskami interwałów
   Widget _buildTimeframeSelector() {
-    // Definicja dostępnych interwałów z Yahoo Finance
     final timeframes = {
-      '1 Dzień': {'range': '10y', 'interval': '1d'},
-      '1 Tydz.': {'range': '10y', 'interval': '1wk'},
-      '1 M-c': {'range': '10y', 'interval': '1mo'},
+      '1D': {'range': '10y', 'interval': '1d'},
+      '1W': {'range': '10y', 'interval': '1wk'},
+      '1M': {'range': '10y', 'interval': '1mo'},
     };
 
     return Wrap(
@@ -121,8 +125,14 @@ class _MarketScreenState extends State<MarketScreen> {
             currentRange == e.value['range'] &&
             currentInterval == e.value['interval'];
         return ChoiceChip(
-          label: Text(e.key),
+          label: Text(
+            e.key,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           selected: isSelected,
+          selectedColor: Colors.blueAccent.withOpacity(0.3),
+          backgroundColor: const Color(0xFF2A2A2A),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           onSelected: (selected) {
             if (selected) {
               setState(() {
@@ -141,220 +151,175 @@ class _MarketScreenState extends State<MarketScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Terminal Inwestycyjny'),
-        backgroundColor:
-            Colors.blueGrey[900], // Bardziej "pro" kolor dla giełdy
-        foregroundColor: Colors.white,
+        title: const Text(
+          'TRADING TERMINAL',
+          style: TextStyle(
+            letterSpacing: 1.5,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.blueAccent),
+            )
           : Row(
               children: [
-                // ==========================================
-                // LEWA KOLUMNA - AI ASYSTENT (Zaślepka)
-                // ==========================================
+                // LEWA KOLUMNA
                 Container(
-                  width: 250, // Stała szerokość panelu bocznego
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    border: Border(right: BorderSide(color: Colors.grey[300]!)),
+                  width: 250,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1E1E1E),
+                    border: Border(right: BorderSide(color: Color(0xFF2A2A2A))),
                   ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.smart_toy,
-                          size: 40,
-                          color: Colors.blueAccent,
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 32,
+                        color: Colors.blueAccent,
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'AI Assistant',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                        SizedBox(height: 16),
-                        Text(
-                          'AI Asystent',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Tutaj w przyszłości pojawią się porady strategiczne generowane przez AI...',
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'AI-powered strategies and analysis coming soon.',
+                        style: TextStyle(color: Colors.grey[400], height: 1.5),
+                      ),
+                    ],
                   ),
                 ),
 
-                // ==========================================
-                // ŚRODKOWA KOLUMNA - WYKRES I NEWSY (Expanded)
-                // ==========================================
-                // GÓRNA CZĘŚĆ ŚRODKA - WYKRES
+                // ŚRODKOWA KOLUMNA
                 Expanded(
                   flex: 3,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-                        child: Wrap(
-                          // Zamieniono Row na Wrap
-                          alignment: WrapAlignment
-                              .spaceBetween, // Rozdziela elementy na boki
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 16.0, // Odstęp poziomy po zawinięciu tekstu
-                          runSpacing:
-                              8.0, // Odstęp pionowy po zawinięciu w nowy wiersz
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Wykres: $currentSymbol',
+                              currentSymbol,
                               style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
                               ),
                             ),
-                            _buildTimeframeSelector(), // Pasek wyboru interwału
+                            _buildTimeframeSelector(),
                           ],
                         ),
                       ),
-                      // Tutaj znajduje się reszta zawartości, np. wykres
+
+                      // CANDLESTICK CHART
                       Expanded(
-                        child: Padding(
+                        flex: 3,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF121212),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFF2A2A2A)),
+                          ),
                           padding: const EdgeInsets.all(8.0),
                           child: candles.isNotEmpty
-                              ? LineChart(
-                                  LineChartData(
-                                    gridData: const FlGridData(show: true),
-                                    titlesData: FlTitlesData(
-                                      leftTitles: AxisTitles(
-                                        sideTitles: SideTitles(
-                                          showTitles: true,
-                                          getTitlesWidget: (value, meta) =>
-                                              Text(
-                                                '\$${value.toStringAsFixed(0)}',
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                ),
-                                              ),
-                                        ),
-                                      ),
-                                      bottomTitles: AxisTitles(
-                                        sideTitles: SideTitles(
-                                          showTitles: true,
-                                          getTitlesWidget: (value, meta) {
-                                            if (value.toInt() >= 0 &&
-                                                value.toInt() <
-                                                    candles.length) {
-                                              final date =
-                                                  DateTime.fromMillisecondsSinceEpoch(
-                                                    candles[value.toInt()]
-                                                        .timestamp,
-                                                  );
-                                              return Text(
-                                                currentInterval == '1mo'
-                                                    ? '${date.year}-${date.month.toString().padLeft(2, '0')}'
-                                                    : '${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                ),
-                                              );
-                                            }
-                                            return const Text('');
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                    borderData: FlBorderData(show: true),
-                                    lineBarsData: [
-                                      LineChartBarData(
-                                        spots: candles
-                                            .asMap()
-                                            .entries
-                                            .map(
-                                              (entry) => FlSpot(
-                                                entry.key.toDouble(),
-                                                entry.value.close,
-                                              ),
-                                            )
-                                            .toList(),
-                                        isCurved: false,
-                                        color: Colors.blue,
-                                        barWidth: 2,
-                                        belowBarData: BarAreaData(show: false),
-                                      ),
-                                    ],
-                                    lineTouchData: LineTouchData(
-                                      touchTooltipData: LineTouchTooltipData(
-                                        getTooltipItems: (touchedSpots) {
-                                          return touchedSpots.map((spot) {
-                                            final candle =
-                                                candles[spot.x.toInt()];
-                                            final date =
-                                                DateTime.fromMillisecondsSinceEpoch(
-                                                  candle.timestamp,
-                                                );
-                                            return LineTooltipItem(
-                                              'Data: ${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}\n'
-                                              'Otwarcie: \$${candle.open.toStringAsFixed(2)}\n'
-                                              'Zamknięcie: \$${candle.close.toStringAsFixed(2)}\n'
-                                              'Min: \$${candle.low.toStringAsFixed(2)}\n'
-                                              'Max: \$${candle.high.toStringAsFixed(2)}',
-                                              const TextStyle(
-                                                color: Colors.white,
-                                              ),
-                                            );
-                                          }).toList();
-                                        },
-                                      ),
-                                    ),
+                              ? InteractiveChart(
+                                  candles: candles,
+                                  style: const ChartStyle(
+                                    priceGainColor: Colors.greenAccent,
+                                    priceLossColor: Colors.redAccent,
+                                    volumeColor: Color(0xFF2A2A2A),
                                   ),
                                 )
-                              : const Center(child: Text('Brak danych')),
+                              : const Center(
+                                  child: Text(
+                                    'No data',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                ),
                         ),
                       ),
-                      const Divider(thickness: 2),
+
                       const Padding(
-                        padding: EdgeInsets.all(8.0),
+                        padding: EdgeInsets.fromLTRB(24, 24, 24, 8),
                         child: Text(
-                          'Lista newsów',
+                          'News',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                       ),
 
-                      // DOLNA CZĘŚĆ ŚRODKA - NEWSY
+                      // NEWSY
                       Expanded(
-                        flex: 2, // Mniej miejsca dla newsów
+                        flex: 2,
                         child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
                           itemCount: newsData.length,
                           itemBuilder: (context, index) {
                             final news = newsData[index];
                             final DateTime date = DateTime.parse(news['date']);
-                            final String formattedDate =
-                                "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+                            final bool isPositive =
+                                news['impact'] == 'Positive';
 
-                            return Card(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 4,
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E1E1E),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFF2A2A2A),
+                                ),
                               ),
                               child: ListTile(
-                                leading: Icon(
-                                  Icons.article,
-                                  color: news['impact'] == 'Positive'
-                                      ? Colors.green
-                                      : Colors.red,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                leading: CircleAvatar(
+                                  backgroundColor: isPositive
+                                      ? Colors.green.withOpacity(0.1)
+                                      : Colors.red.withOpacity(0.1),
+                                  child: Icon(
+                                    isPositive
+                                        ? Icons.trending_up
+                                        : Icons.trending_down,
+                                    color: isPositive
+                                        ? Colors.greenAccent
+                                        : Colors.redAccent,
+                                  ),
                                 ),
                                 title: Text(
                                   news['title'] ?? '',
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
                                   ),
                                 ),
-                                subtitle: Text(
-                                  '$formattedDate - Wpływ: ${news['impact']}',
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}",
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
                               ),
                             );
@@ -365,24 +330,24 @@ class _MarketScreenState extends State<MarketScreen> {
                   ),
                 ),
 
-                // ==========================================
-                // PRAWA KOLUMNA - INSTRUMENTY (Zaślepka)
-                // ==========================================
+                // PRAWA KOLUMNA
                 Container(
                   width: 250,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    border: Border(left: BorderSide(color: Colors.grey[300]!)),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1E1E1E),
+                    border: Border(left: BorderSide(color: Color(0xFF2A2A2A))),
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        padding: EdgeInsets.fromLTRB(20, 24, 20, 16),
                         child: Text(
-                          'Instrumenty (USA)',
+                          'Instruments',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
+                            color: Colors.grey,
                           ),
                         ),
                       ),
@@ -392,26 +357,42 @@ class _MarketScreenState extends State<MarketScreen> {
                           vertical: 8.0,
                         ),
                         child: TextField(
-                          decoration: const InputDecoration(
-                            labelText: 'Szukaj lub wpisz symbol (Enter)',
-                            prefixIcon: Icon(Icons.search, size: 20),
-                            border: OutlineInputBorder(),
-                            isDense: true,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Search symbol...',
+                            hintStyle: TextStyle(color: Colors.grey[500]),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              size: 20,
+                              color: Colors.grey[400],
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xFF2A2A2A),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0,
+                            ),
                           ),
                           onChanged: (value) =>
                               setState(() => searchQuery = value.toUpperCase()),
                           onSubmitted: (value) {
                             if (value.trim().isNotEmpty) {
-                              setState(() {
-                                currentSymbol = value.trim().toUpperCase();
-                              });
-                              fetchMarketData(); // Pobiera dane dla wpisanego z palca symbolu
+                              setState(
+                                () =>
+                                    currentSymbol = value.trim().toUpperCase(),
+                              );
+                              fetchMarketData();
                             }
                           },
                         ),
                       ),
+                      const SizedBox(height: 8),
                       Expanded(
                         child: ListView(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           children: usStocks
                               .where(
                                 (s) =>
@@ -420,27 +401,46 @@ class _MarketScreenState extends State<MarketScreen> {
                                       searchQuery,
                                     ),
                               )
-                              .map(
-                                (stock) => ListTile(
-                                  title: Text(
-                                    stock['symbol']!,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
+                              .map((stock) {
+                                final isSelected =
+                                    currentSymbol == stock['symbol'];
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: isSelected
+                                        ? Colors.blueAccent.withOpacity(0.15)
+                                        : Colors.transparent,
+                                  ),
+                                  child: ListTile(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
+                                    title: Text(
+                                      stock['symbol']!,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: isSelected
+                                            ? Colors.blueAccent
+                                            : Colors.white,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      stock['name']!,
+                                      style: TextStyle(
+                                        color: Colors.grey[500],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      setState(
+                                        () => currentSymbol = stock['symbol']!,
+                                      );
+                                      fetchMarketData();
+                                    },
                                   ),
-                                  subtitle: Text(stock['name']!),
-                                  selected: currentSymbol == stock['symbol'],
-                                  selectedTileColor: Colors.blue.withOpacity(
-                                    0.1,
-                                  ),
-                                  onTap: () {
-                                    setState(
-                                      () => currentSymbol = stock['symbol']!,
-                                    );
-                                    fetchMarketData(); // Pobiera dane dla nowego symbolu
-                                  },
-                                ),
-                              )
+                                );
+                              })
                               .toList(),
                         ),
                       ),
@@ -451,23 +451,4 @@ class _MarketScreenState extends State<MarketScreen> {
             ),
     );
   }
-}
-
-/// Klasa reprezentująca dane świecy OHLCV (Open, High, Low, Close, Volume)
-class CandleData {
-  final int timestamp;
-  final double high;
-  final double low;
-  final double open;
-  final double close;
-  final double volume;
-
-  CandleData({
-    required this.timestamp,
-    required this.high,
-    required this.low,
-    required this.open,
-    required this.close,
-    required this.volume,
-  });
 }

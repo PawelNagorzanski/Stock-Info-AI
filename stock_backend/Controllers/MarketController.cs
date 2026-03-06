@@ -75,8 +75,8 @@ public class MarketController : ControllerBase
     {
         var news = new List<object>
         {
-            new { date = DateTime.UtcNow.AddDays(-2).ToString("yyyy-MM-dd"), title = "Oczekiwana korekta na S&P500", impact = "Negative" },
-            new { date = DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd"), title = "Świetne wyniki gigantów tech", impact = "Positive" }
+            new { date = DateTime.UtcNow.AddDays(-2).ToString("yyyy-MM-dd"), title = "Expected S&P500 correction", impact = "Negative" },
+            new { date = DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd"), title = "Great tech giant earnings", impact = "Positive" }
         };
         return Ok(news);
     }
