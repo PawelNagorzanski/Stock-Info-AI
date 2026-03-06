@@ -1,6 +1,8 @@
 # Stock Info AI - Trading Terminal 📈
 
 Minimalist stock market dashboard providing candlestick charts and market news.
+<img width="1386" height="824" alt="image" src="https://github.com/user-attachments/assets/5ff7112d-2c8d-4a41-9e54-90eab9af952a" />
+
 
 ## 🛠 Tech Stack
 
