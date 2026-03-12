@@ -28,7 +28,11 @@ public class MarketController : ControllerBase
             };
 
             var years = 10; // Domyślnie dla '10y'
-            if (range.EndsWith("y") && int.TryParse(range.TrimEnd('y'), out var y))
+            if (period == Period.Weekly)
+            {
+                years = 2; // Testowo zmniejszamy zakres dla interwału tygodniowego
+            }
+            else if (range.EndsWith("y") && int.TryParse(range.TrimEnd('y'), out var y))
             {
                 years = y;
             }
@@ -37,6 +41,11 @@ public class MarketController : ControllerBase
             var endDate = DateTime.Now;
 
             var history = await Yahoo.GetHistoricalAsync(symbol, startDate, endDate, period);
+
+            if (history == null || !history.Any())
+            {
+                return Ok(new List<CandleData>());
+            }
 
             var result = history.Select(c => new CandleData
             {
