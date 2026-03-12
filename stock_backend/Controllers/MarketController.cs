@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
+using YahooFinanceApi;
 
 namespace stock_backend.Controllers;
 
@@ -7,60 +7,46 @@ namespace stock_backend.Controllers;
 [Route("api/stock")]
 public class MarketController : ControllerBase
 {
-    private readonly HttpClient _httpClient;
-
-    public MarketController(HttpClient httpClient)
+    public MarketController()
     {
-        _httpClient = httpClient;
-        // Wymagane przez Yahoo, by nie odrzucało połączeń jako bot
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
     }
 
-[HttpGet("chart")]
+    [HttpGet("chart")]
     public async Task<IActionResult> GetChart(
-        [FromQuery] string symbol = "AAPL", 
+        [FromQuery] string symbol = "AAPL",
         [FromQuery] string interval = "1d",
-        [FromQuery] string range = "10y") // Z powrotem pobieramy range z zewnątrz
+        [FromQuery] string range = "10y")
     {
         try
         {
-            // Wstrzykujemy oba parametry
-            var url = $"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?interval={interval}&range={range}";
-            
-            var response = await _httpClient.GetAsync(url);
-            if (!response.IsSuccessStatusCode) return StatusCode(500, $"Błąd Yahoo: {response.StatusCode}");
-
-            var content = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(content);
-            
-            var result = new List<CandleData>();
-            var resultNode = doc.RootElement.GetProperty("chart").GetProperty("result")[0];
-            
-            if (!resultNode.TryGetProperty("timestamp", out var timestampsNode)) return Ok(result);
-
-            var timestamps = timestampsNode.EnumerateArray().ToList();
-            var quote = resultNode.GetProperty("indicators").GetProperty("quote")[0];
-            
-            var opens = quote.GetProperty("open").EnumerateArray().ToList();
-            var highs = quote.GetProperty("high").EnumerateArray().ToList();
-            var lows = quote.GetProperty("low").EnumerateArray().ToList();
-            var closes = quote.GetProperty("close").EnumerateArray().ToList();
-            var volumes = quote.GetProperty("volume").EnumerateArray().ToList();
-
-            for (int i = 0; i < timestamps.Count; i++)
+            var period = interval switch
             {
-                if (opens[i].ValueKind == JsonValueKind.Null) continue;
+                "1d" => Period.Daily,
+                "1wk" => Period.Weekly,
+                "1mo" => Period.Monthly,
+                _ => Period.Daily
+            };
 
-                result.Add(new CandleData
-                {
-                    Date = DateTimeOffset.FromUnixTimeSeconds(timestamps[i].GetInt64()).DateTime,
-                    Open = opens[i].GetDecimal(),
-                    High = highs[i].GetDecimal(),
-                    Low = lows[i].GetDecimal(),
-                    Close = closes[i].GetDecimal(),
-                    Volume = volumes[i].GetDecimal()
-                });
+            var years = 10; // Domyślnie dla '10y'
+            if (range.EndsWith("y") && int.TryParse(range.TrimEnd('y'), out var y))
+            {
+                years = y;
             }
+            
+            var startDate = DateTime.Now.AddYears(-years);
+            var endDate = DateTime.Now;
+
+            var history = await Yahoo.GetHistoricalAsync(symbol, startDate, endDate, period);
+
+            var result = history.Select(c => new CandleData
+            {
+                Date = c.DateTime,
+                Open = c.Open,
+                High = c.High,
+                Low = c.Low,
+                Close = c.Close,
+                Volume = c.Volume
+            }).ToList();
 
             return Ok(result);
         }
