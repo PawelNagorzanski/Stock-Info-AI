@@ -3,11 +3,10 @@
 Minimalist stock market dashboard providing candlestick charts and market news.
 <img width="1386" height="824" alt="image" src="https://github.com/user-attachments/assets/5ff7112d-2c8d-4a41-9e54-90eab9af952a" />
 
-
 ## 🛠 Tech Stack
 
-* **Frontend:** Flutter (Dart), `candlesticks` package
-* **Backend:** C# .NET 8 (Web API)
+* **Frontend:** Flutter (Dart), `interactive_chart` package
+* **Backend:** C# .NET 10 (Web API)
 * **Data Provider:** Yahoo Finance (Charts), Custom/Finnhub (News)
 
 ## ✨ Features
@@ -22,7 +21,7 @@ Minimalist stock market dashboard providing candlestick charts and market news.
 ### 1. Prerequisites
 
 * [Flutter SDK](https://docs.flutter.dev/get-started/install)
-* [.NET 8 SDK](https://dotnet.microsoft.com/download)
+* [.NET 10 SDK](https://dotnet.microsoft.com/download)
 
 ### 2. Backend (.NET)
 
@@ -49,6 +48,3 @@ flutter run
 * [ ] Add technical indicators (RSI, MACD) to the chart.
 * [ ] Support for global markets and Forex.
 * [ ] Custom user portfolio management.
- zgadzał się z nowym README?
-
-```
