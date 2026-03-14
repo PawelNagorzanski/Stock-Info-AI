@@ -1,22 +1,17 @@
-using MatthiWare.FinancialModelingPrep;
+using stock_backend;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddHttpClient();
 
-var fmpOptions = new FinancialModelingPrepOptions
-{
-    ApiKey = builder.Configuration.GetValue<string>("FmpApiKey")
-};
-builder.Services.AddFinancialModelingPrepApiClient(fmpOptions);
-
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
         builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
+
+builder.Services.AddScoped<IFinnhubService, FinnhubService>();
 
 builder.Services.AddControllers();
 

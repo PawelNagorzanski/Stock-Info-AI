@@ -1,8 +1,4 @@
-using MatthiWare.FinancialModelingPrep;
-using MatthiWare.FinancialModelingPrep.Model.StockTimeSeries;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Globalization;
 
 namespace stock_backend.Controllers;
 
@@ -10,11 +6,11 @@ namespace stock_backend.Controllers;
 [Route("api/stock")]
 public class MarketController : ControllerBase
 {
-    private readonly IFinancialModelingPrepApiClient _apiClient;
+    private readonly IFinnhubService _finnhubService;
 
-    public MarketController(IFinancialModelingPrepApiClient apiClient)
+    public MarketController(IFinnhubService finnhubService)
     {
-        _apiClient = apiClient;
+        _finnhubService = finnhubService;
     }
 
     [HttpGet("chart")]
@@ -25,40 +21,32 @@ public class MarketController : ControllerBase
     {
         try
         {
-            var years = 10;
-            if (range.EndsWith("y") && int.TryParse(range.TrimEnd('y'), out var y))
+            var resolution = interval switch
             {
-                years = y;
+                "1d" => "D",
+                "1w" => "W",
+                "1m" => "M",
+                _ => "D"
+            };
+
+            var to = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var from = to;
+
+            if (range.EndsWith("y") && int.TryParse(range.TrimEnd('y'), out var years))
+            {
+                from = DateTimeOffset.UtcNow.AddYears(-years).ToUnixTimeSeconds();
             }
-            
-            var startDate = DateTime.Now.AddYears(-years);
-            var endDate = DateTime.Now;
-
-            // TODO: The library doesn't seem to support weekly/monthly intervals directly.
-            // Using daily for all and the frontend will have to deal with it, or we need to implement resampling.
-            var apiResponse = await _apiClient.StockTimeSeries.GetHistoricalDailyPricesAsync(symbol, startDate.ToString("yyyy-MM-dd"), endDate.ToString("yyyy-MM-dd"));
-
-            if (apiResponse.HasError)
+            else if (range.EndsWith("m") && int.TryParse(range.TrimEnd('m'), out var months))
             {
-                return StatusCode(500, $"Błąd API: {apiResponse.Error}");
+                from = DateTimeOffset.UtcNow.AddMonths(-months).ToUnixTimeSeconds();
+            }
+            else if (range.EndsWith("d") && int.TryParse(range.TrimEnd('d'), out var days))
+            {
+                from = DateTimeOffset.UtcNow.AddDays(-days).ToUnixTimeSeconds();
             }
 
-            if (apiResponse.Data == null || !apiResponse.Data.Historical.Any())
-            {
-                return Ok(new List<CandleData>());
-            }
-            
-            var result = apiResponse.Data.Historical.Select(c => new CandleData
-            {
-                Timestamp = ((DateTimeOffset)DateTime.Parse(c.Date, CultureInfo.InvariantCulture)).ToUnixTimeMilliseconds(),
-                Open = (decimal)c.Open,
-                High = (decimal)c.High,
-                Low = (decimal)c.Low,
-                Close = (decimal)c.Close,
-                Volume = (decimal)c.Volume
-            }).ToList();
-
-            return Ok(result);
+            var candles = await _finnhubService.GetCandlesAsync(symbol, resolution, from, to);
+            return Ok(candles);
         }
         catch (Exception ex)
         {
@@ -67,13 +55,17 @@ public class MarketController : ControllerBase
     }
 
     [HttpGet("news")]
-    public IActionResult GetNews()
+    public async Task<IActionResult> GetNews([FromQuery] string symbol = "AAPL")
     {
-        var news = new List<object>
+        try
         {
-            new { date = DateTime.UtcNow.AddDays(-2).ToString("yyyy-MM-dd"), title = "Expected S&P500 correction", impact = "Negative" },
-            new { date = DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd"), title = "Great tech giant earnings", impact = "Positive" }
-        };
-        return Ok(news);
+            var newsJson = await _finnhubService.GetNewsAsync(symbol);
+            return Content(newsJson, "application/json");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Błąd backendu: {ex.Message}");
+        }
     }
 }
+
