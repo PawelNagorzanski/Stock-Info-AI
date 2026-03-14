@@ -1,6 +1,17 @@
+using MatthiWare.FinancialModelingPrep;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Dodajemy politykę CORS (pozwalamy na połączenia z dowolnego źródła)
+// Add services to the container.
+builder.Services.AddHttpClient();
+
+var fmpOptions = new FinancialModelingPrepOptions
+{
+    ApiKey = builder.Configuration.GetValue<string>("FmpApiKey")
+};
+builder.Services.AddFinancialModelingPrepApiClient(fmpOptions);
+
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
@@ -8,19 +19,12 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-    });
-}); 
-
 
 var app = builder.Build();
 
-// Uruchamiamy CORS przed kontrolerami! To bardzo ważne.
+// Configure the HTTP request pipeline.
 app.UseCors("AllowAll");
 
-app.MapControllers(); 
+app.MapControllers();
+
 app.Run();

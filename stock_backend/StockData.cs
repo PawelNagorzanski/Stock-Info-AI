@@ -5,7 +5,7 @@ namespace stock_backend;
 // Format dla frontendu
 public class CandleData
 {
-    public DateTime Date { get; set; }
+    public long Timestamp { get; set; }
     public decimal Open { get; set; }
     public decimal High { get; set; }
     public decimal Low { get; set; }

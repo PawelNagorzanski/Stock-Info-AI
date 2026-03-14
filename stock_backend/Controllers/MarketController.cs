@@ -1,5 +1,8 @@
+using MatthiWare.FinancialModelingPrep;
+using MatthiWare.FinancialModelingPrep.Model.StockTimeSeries;
 using Microsoft.AspNetCore.Mvc;
-using YahooFinanceApi;
+using System;
+using System.Globalization;
 
 namespace stock_backend.Controllers;
 
@@ -7,8 +10,11 @@ namespace stock_backend.Controllers;
 [Route("api/stock")]
 public class MarketController : ControllerBase
 {
-    public MarketController()
+    private readonly IFinancialModelingPrepApiClient _apiClient;
+
+    public MarketController(IFinancialModelingPrepApiClient apiClient)
     {
+        _apiClient = apiClient;
     }
 
     [HttpGet("chart")]
@@ -19,20 +25,8 @@ public class MarketController : ControllerBase
     {
         try
         {
-            var period = interval switch
-            {
-                "1d" => Period.Daily,
-                "1wk" => Period.Weekly,
-                "1mo" => Period.Monthly,
-                _ => Period.Daily
-            };
-
-            var years = 10; // Domyślnie dla '10y'
-            if (period == Period.Weekly)
-            {
-                years = 2; // Testowo zmniejszamy zakres dla interwału tygodniowego
-            }
-            else if (range.EndsWith("y") && int.TryParse(range.TrimEnd('y'), out var y))
+            var years = 10;
+            if (range.EndsWith("y") && int.TryParse(range.TrimEnd('y'), out var y))
             {
                 years = y;
             }
@@ -40,21 +34,28 @@ public class MarketController : ControllerBase
             var startDate = DateTime.Now.AddYears(-years);
             var endDate = DateTime.Now;
 
-            var history = await Yahoo.GetHistoricalAsync(symbol, startDate, endDate, period);
+            // TODO: The library doesn't seem to support weekly/monthly intervals directly.
+            // Using daily for all and the frontend will have to deal with it, or we need to implement resampling.
+            var apiResponse = await _apiClient.StockTimeSeries.GetHistoricalDailyPricesAsync(symbol, startDate.ToString("yyyy-MM-dd"), endDate.ToString("yyyy-MM-dd"));
 
-            if (history == null || !history.Any())
+            if (apiResponse.HasError)
+            {
+                return StatusCode(500, $"Błąd API: {apiResponse.Error}");
+            }
+
+            if (apiResponse.Data == null || !apiResponse.Data.Historical.Any())
             {
                 return Ok(new List<CandleData>());
             }
-
-            var result = history.Select(c => new CandleData
+            
+            var result = apiResponse.Data.Historical.Select(c => new CandleData
             {
-                Date = c.DateTime,
-                Open = c.Open,
-                High = c.High,
-                Low = c.Low,
-                Close = c.Close,
-                Volume = c.Volume
+                Timestamp = ((DateTimeOffset)DateTime.Parse(c.Date, CultureInfo.InvariantCulture)).ToUnixTimeMilliseconds(),
+                Open = (decimal)c.Open,
+                High = (decimal)c.High,
+                Low = (decimal)c.Low,
+                Close = (decimal)c.Close,
+                Volume = (decimal)c.Volume
             }).ToList();
 
             return Ok(result);

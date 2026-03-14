@@ -23,7 +23,7 @@ class MarketService {
       final List<CandleData> candles = rawChartData
           .map(
             (e) => CandleData(
-              timestamp: DateTime.parse(e['date']).millisecondsSinceEpoch,
+              timestamp: e['timestamp'],
               high: (e['high'] as num).toDouble(),
               low: (e['low'] as num).toDouble(),
               open: (e['open'] as num).toDouble(),
@@ -52,16 +52,16 @@ class MarketService {
 
   List<Stock> getUsStocks() {
     const List<Map<String, String>> usStocksData = [
-      {'symbol': 'AAPL', 'name': 'Apple Inc.'},
-      {'symbol': 'MSFT', 'name': 'Microsoft'},
-      {'symbol': 'GOOGL', 'name': 'Alphabet (Google)'},
-      {'symbol': 'AMZN', 'name': 'Amazon'},
-      {'symbol': 'TSLA', 'name': 'Tesla'},
-      {'symbol': 'NVDA', 'name': 'NVIDIA'},
-      {'symbol': 'META', 'name': 'Meta Platforms'},
-      {'symbol': 'NFLX', 'name': 'Netflix'},
-      {'symbol': 'AMD', 'name': 'Advanced Micro Devices'},
-      {'symbol': 'INTC', 'name': 'Intel'},
+      {'symbol': 'F', 'name': 'Ford Motor'},
+      {'symbol': 'GE', 'name': 'General Electric'},
+      {'symbol': 'KO', 'name': 'Coca-Cola'},
+      {'symbol': 'PFE', 'name': 'Pfizer'},
+      {'symbol': 'T', 'name': 'AT&T'},
+      {'symbol': 'BAC', 'name': 'Bank of America'},
+      {'symbol': 'WMT', 'name': 'Walmart'},
+      {'symbol': 'JNJ', 'name': 'Johnson & Johnson'},
+      {'symbol': 'PG', 'name': 'Procter & Gamble'},
+      {'symbol': 'XOM', 'name': 'Exxon Mobil'},
     ];
     return usStocksData.map((data) => Stock(symbol: data['symbol']!, name: data['name']!)).toList();
   }
