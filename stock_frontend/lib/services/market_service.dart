@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:interactive_chart/interactive_chart.dart';
+import '../models/candle_data.dart';
 import '../models/news_item.dart';
 import '../models/stock.dart';
 
@@ -11,6 +11,7 @@ class MarketService {
     required String symbol,
     required String range,
     required String interval,
+    List<NewsItem>? news, // Optional news to mark candles
   }) async {
     final response = await http.get(
       Uri.parse(
@@ -32,11 +33,56 @@ class MarketService {
             ),
           )
           .toList();
+
+      // Mark candles that have news on that day
+      if (news != null && news.isNotEmpty) {
+        for (var candle in candles) {
+          final candleDate = DateTime.fromMillisecondsSinceEpoch(
+            candle.timestamp,
+          );
+          final hasNewsOnDay = news.any(
+            (newsItem) =>
+                newsItem.date.year == candleDate.year &&
+                newsItem.date.month == candleDate.month &&
+                newsItem.date.day == candleDate.day,
+          );
+          if (hasNewsOnDay) {
+            // Since CandleData is immutable, we need to create a new instance
+            // We'll handle this by marking after creation using a different approach
+          }
+        }
+      }
+
       candles.sort((a, b) => a.timestamp.compareTo(b.timestamp));
       return candles;
     } else {
       throw Exception('Failed to load chart data');
     }
+  }
+
+  // Helper method to mark candles with news
+  List<CandleData> markCandlesWithNews(
+    List<CandleData> candles,
+    List<NewsItem> news,
+  ) {
+    return candles.map((candle) {
+      final candleDate = DateTime.fromMillisecondsSinceEpoch(candle.timestamp);
+      final hasNewsOnDay = news.any(
+        (newsItem) =>
+            newsItem.date.year == candleDate.year &&
+            newsItem.date.month == candleDate.month &&
+            newsItem.date.day == candleDate.day,
+      );
+      return CandleData(
+        timestamp: candle.timestamp,
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+        volume: candle.volume,
+        hasNews: hasNewsOnDay,
+      );
+    }).toList();
   }
 
   Future<List<NewsItem>> fetchNews() async {
@@ -63,6 +109,8 @@ class MarketService {
       {'symbol': 'PG', 'name': 'Procter & Gamble'},
       {'symbol': 'XOM', 'name': 'Exxon Mobil'},
     ];
-    return usStocksData.map((data) => Stock(symbol: data['symbol']!, name: data['name']!)).toList();
+    return usStocksData
+        .map((data) => Stock(symbol: data['symbol']!, name: data['name']!))
+        .toList();
   }
 }

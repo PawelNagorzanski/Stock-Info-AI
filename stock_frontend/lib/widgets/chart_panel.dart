@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:interactive_chart/interactive_chart.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
+import '../models/candle_data.dart';
 
 class ChartPanel extends StatelessWidget {
   final List<CandleData> candles;
@@ -19,21 +20,53 @@ class ChartPanel extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(8.0),
         child: candles.isNotEmpty
-            ? InteractiveChart(
-                candles: candles,
-                style: const ChartStyle(
-                  priceGainColor: Colors.greenAccent,
-                  priceLossColor: Colors.redAccent,
-                  volumeColor: Color(0xFF2A2A2A),
+            ? SfCartesianChart(
+                plotAreaBorderWidth: 0,
+                primaryXAxis: DateTimeAxis(
+                  majorGridLines: const MajorGridLines(width: 0),
                 ),
+                primaryYAxis: NumericAxis(
+                  minimum: _getMin(),
+                  maximum: _getMax(),
+                ),
+                series: <CartesianSeries>[
+                  // Główna warstwa: świece
+                  CandleSeries<CandleData, DateTime>(
+                    dataSource: candles,
+                    xValueMapper: (data, _) => data.date,
+                    lowValueMapper: (data, _) => data.low,
+                    highValueMapper: (data, _) => data.high,
+                    openValueMapper: (data, _) => data.open,
+                    closeValueMapper: (data, _) => data.close,
+                    bullColor: Colors.greenAccent,
+                    bearColor: Colors.redAccent,
+                  ),
+                  // Druga warstwa: markery wiadomości
+                  ScatterSeries<CandleData, DateTime>(
+                    dataSource: candles.where((c) => c.hasNews).toList(),
+                    xValueMapper: (data, _) => data.date,
+                    // Wyświetla punkt nad świecą
+                    yValueMapper: (data, _) =>
+                        data.high + (_getMax() - _getMin()) * 0.05,
+                    color: Colors.blueAccent,
+                    markerSettings: const MarkerSettings(
+                      isVisible: true,
+                      shape: DataMarkerType.circle,
+                    ),
+                    onPointTap: (ChartPointDetails details) {
+                      // Akcja po kliknięciu znacznika
+                    },
+                  ),
+                ],
               )
             : const Center(
-                child: Text(
-                  'No data',
-                  style: TextStyle(color: Colors.grey),
-                ),
+                child: Text('No data', style: TextStyle(color: Colors.grey)),
               ),
       ),
     );
   }
+
+  double _getMin() => candles.map((c) => c.low).reduce((a, b) => a < b ? a : b);
+  double _getMax() =>
+      candles.map((c) => c.high).reduce((a, b) => a > b ? a : b);
 }
