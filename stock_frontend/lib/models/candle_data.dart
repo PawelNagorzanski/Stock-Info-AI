@@ -17,5 +17,6 @@ class CandleData {
     this.hasNews = false,
   });
 
-  DateTime get date => DateTime.fromMillisecondsSinceEpoch(timestamp);
+  DateTime get date =>
+      DateTime.fromMillisecondsSinceEpoch(timestamp, isUtc: true);
 }
