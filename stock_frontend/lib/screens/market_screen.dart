@@ -39,19 +39,16 @@ class _MarketScreenState extends State<MarketScreen> {
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
     try {
-      final newsFuture = _marketService.fetchNews();
       final candlesFuture = _marketService.fetchChartData(
         symbol: _currentSymbol,
         range: _currentRange,
         interval: _currentInterval,
       );
+      final newsFuture = _marketService.fetchNews();
 
-      final results = await Future.wait([candlesFuture, newsFuture]);
+      final candles = await candlesFuture;
+      final news = await newsFuture;
 
-      final candles = results[0] as List<CandleData>;
-      final news = results[1] as List<NewsItem>;
-
-      // Mark candles that have news on the same day
       final markedCandles = _marketService.markCandlesWithNews(candles, news);
 
       setState(() {
