@@ -11,7 +11,6 @@ class MarketService {
     required String symbol,
     required String range,
     required String interval,
-    List<NewsItem>? news, // Optional news to mark candles
   }) async {
     final response = await http.get(
       Uri.parse(
@@ -34,25 +33,6 @@ class MarketService {
           )
           .toList();
 
-      // Mark candles that have news on that day
-      if (news != null && news.isNotEmpty) {
-        for (var candle in candles) {
-          final candleDate = DateTime.fromMillisecondsSinceEpoch(
-            candle.timestamp,
-          );
-          final hasNewsOnDay = news.any(
-            (newsItem) =>
-                newsItem.date.year == candleDate.year &&
-                newsItem.date.month == candleDate.month &&
-                newsItem.date.day == candleDate.day,
-          );
-          if (hasNewsOnDay) {
-            // Since CandleData is immutable, we need to create a new instance
-            // We'll handle this by marking after creation using a different approach
-          }
-        }
-      }
-
       candles.sort((a, b) => a.timestamp.compareTo(b.timestamp));
       return candles;
     } else {
@@ -66,7 +46,10 @@ class MarketService {
     List<NewsItem> news,
   ) {
     return candles.map((candle) {
-      final candleDate = DateTime.fromMillisecondsSinceEpoch(candle.timestamp);
+      final candleDate = DateTime.fromMillisecondsSinceEpoch(
+        candle.timestamp,
+        isUtc: true,
+      );
       final hasNewsOnDay = news.any(
         (newsItem) =>
             newsItem.date.year == candleDate.year &&
